@@ -3,8 +3,8 @@
     to the Serial UART on the 328 directly.
 */
 
-#define syncTimeout       1000
-#define responseTimeout   1000
+#define syncTimeout       500
+#define responseTimeout   500
 
 /* STK500 constants list, from AVRDUDE */
 #define STK_OK              0x10
@@ -100,7 +100,7 @@ void loop() {
   // Get in sync first
   bool inSync = false;
   uint32_t syncstart = millis();
-  
+
   while (!inSync && (millis() - syncstart < syncTimeout))
   {
     DEBUGLN("Trying to get in sync...");
@@ -212,11 +212,11 @@ void loop() {
   }
 
   // FIXME This is the end of the program...
-//  DEBUGLN("Reset Programmer - End of Code - No looping today");
-//  while (1)
-//  {
-//   
-//    };
+  //  DEBUGLN("Reset Programmer - End of Code - No looping today");
+  //  while (1)
+  //  {
+  //
+  //    };
 
 
 
@@ -238,21 +238,24 @@ bool getOKResponse(uint32_t timeout)
       DEBUGLN("getOKResponse function retuns TRUE");
     }
   }
-  return false;
-  DEBUGLN("getOKResponse function retuns FALSE");
+  else {
+    return false;
+    DEBUGLN("getOKResponse function retuns FALSE");
+  }
 }
 
 int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
 {
   DEBUGLN("We are in getResponse function");
   uint32_t reponsestart = millis();
-  while ((millis() - reponsestart < timeout) && (Serial.available() < bufferLen))
+  while ((millis() - reponsestart < timeout)  && (Serial.available() < bufferLen))
   {
     delay(100);
-    
-  }
 
-  if ((millis() - reponsestart) < timeout)
+  }
+  DEBUGLN("End of checking in getResponse function");
+  
+  if (1)//((millis() - reponsestart) < timeout) //testing this funciton ...debug not showing which is strnage
   {
     // We've got some data
     return Serial2.readBytes(buffer, bufferLen);
@@ -268,7 +271,7 @@ int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
 // Sends a short command and tacks on the CRC_EOP
 void sendCommand(uint8_t* cmd, size_t cmdLen)
 {
-  
+
   DEBUG("Sending ");
   Serial.print(cmdLen);// Debug only takes 1 argument so Serial is used here
   DEBUGLN(" bytes to target, plus CRC_EOP");
