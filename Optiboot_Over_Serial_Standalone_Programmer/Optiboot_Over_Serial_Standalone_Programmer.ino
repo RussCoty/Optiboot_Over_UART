@@ -1,6 +1,6 @@
 /* This sketch will allow programming of an Atmega 328 or similar that has optiboot installed, over serial UART
     Currently set up for Teensy 3.6 to proigram a 328AU over Serial prot 2 (Teensy 3.6 pins 9 and 10) connected
-    to the Serial UART on the 32* directly.
+    to the Serial UART on the 328 directly.
 */
 
 #define syncTimeout       1000
@@ -46,54 +46,62 @@
 #define STK_READ_FUSE_EXT   0x77  // 'w'
 #define STK_READ_OSCCAL_EXT 0x78  // 'x'
 
+#define DEBUG(x)        Serial.print(x)
+#define DEBUGLN(x)      Serial.println(x)
 
+const int startButton = 28; //This Button can be used to start the process
 uint8_t respBuf[200]; // FIXME magic numbers!
 uint8_t cmdBuf[200];  // FIXME Check buffer sizes and ideally don't use
 
 
 void setup() {
-  // put your setup code here, to run once:
-Serial.begin (115200);
-Serial2.begin (14400);
+
+  Serial.begin (115200);
+  Serial2.begin(115200);
+  pinMode (startButton, INPUT);
+  delay(500);
+  DEBUGLN ("SETUP RUN");
 
 
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-
-
-
-
-  // FIXME This will make more sense to be in a different file
-  // The actual image to flash. This can be copy-pasted as-is from a
-  // .hex file. If you do, replace all lines below starting with a
-  // colon, but make sure to keep the start and end markers {R"( and
-  // )"} in place.
-  const size_t chipsize = 32767 - 1024; // Total flash AVAILABLE in the 328, so not inc. bootloader - FIXME Set this to the right value too!!!
-  const size_t image_page_size = 128;
-  const size_t image_size = 19000; // FIXME Set this to a useful value, and it only needs to be as big as the HEX file is (rounded up to next 128 bytes maybe?)
-  // FIXME Replace the hex below with an actual hex file (without the bootloader)!!!
-  uint8_t image_hexcode[image_size] = { R"(
+// FIXME This will make more sense to be in a different file
+// The actual image to flash. This can be copy-pasted as-is from a
+// .hex file. If you do, replace all lines below starting with a
+// colon, but make sure to keep the start and end markers {R"( and
+// )"} in place.
+const size_t chipsize = 32767 - 1024; // Total flash AVAILABLE in the 328, so not inc. bootloader - FIXME Set this to the right value too!!!
+const size_t image_page_size = 128;
+const size_t image_size = 19000; // FIXME Set this to a useful value, and it only needs to be as big as the HEX file is (rounded up to next 128 bytes maybe?)
+// FIXME Replace the hex below with an actual hex file (without the bootloader)!!!
+uint8_t image_hexcode[image_size] = { R"(
 :107E0000112494B714BE892F8D7011F0892FDED004
 :107E100085E08093810082E08093C00088E18093B8
 :107E2000C10086E08093C20080E18093C4008EE0B0
 :0A7FD000E7DFEE27FF270994020601
 :00000001FF
     )"
-                                      };
+                                    };
+
+uint8_t pageBuffer[image_page_size];
 
 
-  
+void loop() {
 
-  uint8_t pageBuffer[image_page_size];
 
-#define DEBUG(x)        Serial.print(x)
-#define DEBUGLN(x)      Serial.println(x)
+  // Wait for start button to be pressed
+  DEBUGLN("PRESS SHIFT");
+  while (digitalRead (startButton) == HIGH) {
+    // DEBUG(".");
+    delay(100);
+  }
+
 
   // Get in sync first
   bool inSync = false;
-  while (!inSync && (millis() < syncTimeout))
+  uint32_t syncstart = millis();
+  
+  while (!inSync && (millis() - syncstart < syncTimeout))
   {
     DEBUGLN("Trying to get in sync...");
     // We should flush the serial buffer to clear out any garbage
@@ -220,42 +228,50 @@ void loop() {
 // Functions below this point
 bool getOKResponse(uint32_t timeout)
 {
-  DEBUGLN("We are in getOKResponse funciton");
+  DEBUGLN("We are in getOKResponse function");
   int ret = getResponse(respBuf, 2, responseTimeout);
   if (ret == 2)
   {
     if ((respBuf[0] == STK_INSYNC) && (respBuf[1] == STK_OK))
     {
       return true;
-      DEBUGLN("getOKResponse funciton retuns TRUE");
+      DEBUGLN("getOKResponse function retuns TRUE");
     }
   }
   return false;
-  DEBUGLN("getOKResponse funciton retuns FALSE");
+  DEBUGLN("getOKResponse function retuns FALSE");
 }
 
 int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
 {
+  DEBUGLN("We are in getResponse function");
   uint32_t reponsestart = millis();
   while ((millis() - reponsestart < timeout) && (Serial.available() < bufferLen))
   {
     delay(100);
+    
   }
 
-  if (millis() - reponsestart < timeout)
+  if ((millis() - reponsestart) < timeout)
   {
     // We've got some data
     return Serial2.readBytes(buffer, bufferLen);
+    DEBUGLN("getResponse function retuned a value");
   }
   else
   {
     return -1;
+    DEBUGLN("getResponse function retuned a -1");
   }
 }
 
 // Sends a short command and tacks on the CRC_EOP
 void sendCommand(uint8_t* cmd, size_t cmdLen)
 {
+  
+  DEBUG("Sending ");
+  Serial.print(cmdLen);// Debug only takes 1 argument so Serial is used here
+  DEBUGLN(" bytes to target, plus CRC_EOP");
   Serial2.write(cmd, cmdLen);
   Serial2.write(CRC_EOP);
 }
