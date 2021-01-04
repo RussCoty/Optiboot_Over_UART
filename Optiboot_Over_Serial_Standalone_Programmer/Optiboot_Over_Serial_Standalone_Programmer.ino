@@ -1,7 +1,7 @@
-/* This sketch will allow programming of an Atmega 328 or similar that has optiboot installed, over serial UART 
- *  Currently set up for Teensy 3.6 to proigram a 328AU over Serial prot 2 (Teensy 3.6 pins 9 and 10) connected 
- *  to the Serial UART on the 32* directly.
- */
+/* This sketch will allow programming of an Atmega 328 or similar that has optiboot installed, over serial UART
+    Currently set up for Teensy 3.6 to proigram a 328AU over Serial prot 2 (Teensy 3.6 pins 9 and 10) connected
+    to the Serial UART on the 32* directly.
+*/
 
 #define syncTimeout       1000
 #define responseTimeout   1000
@@ -101,6 +101,7 @@ void loop() {
     // FIXME while loop?
     while (Serial2.available())
     {
+      //Serial.println(Serial2.read());   // read it and send it out Serial (USB)
       (void)Serial2.read(); // Read in any data and throw it away
     }
 
@@ -203,33 +204,45 @@ void loop() {
   }
 
   // FIXME This is the end of the program...
-  //while (1);
+//  DEBUGLN("Reset Programmer - End of Code - No looping today");
+//  while (1)
+//  {
+//   
+//    };
+
 
 
 }
-// .....
+
+
+//End of Main loop.
+
+// Functions below this point
 bool getOKResponse(uint32_t timeout)
 {
+  DEBUGLN("We are in getOKResponse funciton");
   int ret = getResponse(respBuf, 2, responseTimeout);
   if (ret == 2)
   {
     if ((respBuf[0] == STK_INSYNC) && (respBuf[1] == STK_OK))
     {
       return true;
+      DEBUGLN("getOKResponse funciton retuns TRUE");
     }
   }
   return false;
+  DEBUGLN("getOKResponse funciton retuns FALSE");
 }
 
 int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
 {
-  uint32_t start = millis();
-  while ((millis() - start < timeout) && (Serial.available() < bufferLen))
+  uint32_t reponsestart = millis();
+  while ((millis() - reponsestart < timeout) && (Serial.available() < bufferLen))
   {
     delay(100);
   }
 
-  if (millis() - start < timeout)
+  if (millis() - reponsestart < timeout)
   {
     // We've got some data
     return Serial2.readBytes(buffer, bufferLen);
@@ -458,15 +471,15 @@ byte *readImagePage (byte *readhextext, uint16_t readpageaddr, uint8_t readpages
 }
 
 /*
- * hexton
- * Turn a Hex digit (0..9, A..F) into the equivalent binary value (0-16)
- */
+   hexton
+   Turn a Hex digit (0..9, A..F) into the equivalent binary value (0-16)
+*/
 byte hexton (byte h)
 {
   if (h >= '0' && h <= '9')
-    return(h - '0');
+    return (h - '0');
   if (h >= 'A' && h <= 'F')
-    return((h - 'A') + 10);
+    return ((h - 'A') + 10);
   DEBUGLN("Bad hex digit!");
   return (h);
 }
