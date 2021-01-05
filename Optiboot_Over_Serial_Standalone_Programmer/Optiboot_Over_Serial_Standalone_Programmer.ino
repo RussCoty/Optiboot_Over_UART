@@ -52,8 +52,8 @@
 #define rstPin 32 //this pin is connected to the 328 just to make sure we are going into programming mode in optiboot correctly. 
 
 const int startButton = 28; //This Button can be used to start the process
-uint8_t respBuf[200]; // FIXME magic numbers!
-uint8_t cmdBuf[200];  // FIXME Check buffer sizes and ideally don't use
+uint8_t respBuf[128]; // FIXME magic numbers!
+uint8_t cmdBuf[128];  // FIXME Check buffer sizes and ideally don't use
 
 
 
@@ -106,10 +106,10 @@ void loop() {
 
   // RESET THE TARGET WITH A wire connecteed to rstPin (currently 32) on the programmer.
   // Just to test things
-  digitalWrite (rstPin, LOW);
-  delay (2);
-  digitalWrite (rstPin, HIGH);
-  DEBUGLN ("Target Reset"); 
+//  digitalWrite (rstPin, LOW);
+//  delay (2);
+//  digitalWrite (rstPin, HIGH);
+//  DEBUGLN ("Target Reset");
 
   // Get in sync first
   bool inSync = false;
@@ -134,6 +134,7 @@ void loop() {
 
     if (getOKResponse(responseTimeout)) {
       DEBUGLN("We're in sync!!!");
+      DEBUGLN("");
       inSync = true;
     }
   }
@@ -148,8 +149,9 @@ void loop() {
 
     if (getOKResponse(responseTimeout))
     {
+      DEBUGLN("Program mode entered and confirmed");
       // Now we can load the program!
-      uint8_t currentAddress = 0x0000;
+      int currentAddress = 0x0000;
       uint8_t* hextext = image_hexcode;
       while (currentAddress < chipsize && hextext) {
         DEBUG("Writing address $"); DEBUGLN(currentAddress);
@@ -168,7 +170,7 @@ void loop() {
         hextext = hextextpos;
         currentAddress += image_page_size;
       }
-      //*
+      
       // We should now verify that it's been written
       // Start again at the beginning of the hex
       currentAddress = 0;// This was 0x00000
@@ -228,15 +230,15 @@ void loop() {
     DEBUGLN("");
     DEBUGLN("");
     DEBUGLN("");
-    DEBUGLN("");    
+    DEBUGLN("");
   }
 
   // FIXME This is the end of the program...
-  //  DEBUGLN("Reset Programmer - End of Code - No looping today");
-  //  while (1)
-  //  {
-  //
-  //    };
+    DEBUGLN("Reset Programmer - End of Code - No looping today");
+    while (1)
+    {
+  
+      };
 
 
 
@@ -252,15 +254,16 @@ bool getOKResponse(uint32_t timeout)
   int ret = getResponse(respBuf, 2, responseTimeout);
   if (ret == 2)
   {
+    DEBUGLN("getOKResponse function sees 2 bytes");
     if ((respBuf[0] == STK_INSYNC) && (respBuf[1] == STK_OK))
     {
-      return true;
       DEBUGLN("getOKResponse function retuns TRUE");
+      return true;
     }
   }
   else {
-    return false;
     DEBUGLN("getOKResponse function retuns FALSE");
+    return false;
   }
 }
 
@@ -273,7 +276,7 @@ int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
     delay(1);
 
   }
-  DEBUGLN("End of checking in getResponse function");
+  //DEBUGLN("End of checking in getResponse function");
 
   if ((millis() - reponsestart) < timeout) //testing this funciton ...debug not showing which is strnage
   {
@@ -284,8 +287,8 @@ int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
   }
   else
   {
-   
-    DEBUGLN("getResponse function retuned a -1"); 
+
+    DEBUGLN("getResponse function retuned a -1");
     return -1;
   }
 }
@@ -296,7 +299,9 @@ void sendCommand(uint8_t* cmd, size_t cmdLen)
 
   DEBUG("Sending ");
   Serial.print(cmdLen);// Debug only takes 1 argument so Serial is used here
-  DEBUGLN(" bytes to target, plus CRC_EOP");
+  DEBUG(" bytes to target, plus CRC_EOP. Command was: ");
+  Serial.write (*cmd);// Debug only takes 1 argument so Serial is used here
+  DEBUGLN("");
   Serial2.write(cmd, cmdLen);
   Serial2.write(CRC_EOP);
 }
