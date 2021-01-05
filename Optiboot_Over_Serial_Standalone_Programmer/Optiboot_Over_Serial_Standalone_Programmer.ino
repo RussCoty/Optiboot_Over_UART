@@ -49,9 +49,15 @@
 #define DEBUG(x)        Serial.print(x)
 #define DEBUGLN(x)      Serial.println(x)
 
+#define rstPin 32 //this pin is connected to the 328 just to make sure we are going into programming mode in optiboot correctly. 
+
 const int startButton = 28; //This Button can be used to start the process
 uint8_t respBuf[200]; // FIXME magic numbers!
 uint8_t cmdBuf[200];  // FIXME Check buffer sizes and ideally don't use
+
+
+
+
 
 
 void setup() {
@@ -61,7 +67,9 @@ void setup() {
   pinMode (startButton, INPUT);
   delay(500);
   DEBUGLN ("SETUP RUN");
-
+  // Using the Reset pin
+  pinMode (rstPin, INPUT);
+  digitalWrite (rstPin, HIGH);
 
 }
 
@@ -89,13 +97,19 @@ uint8_t pageBuffer[image_page_size];
 void loop() {
 
 
-//  // Wait for start button to be pressed
-//  DEBUGLN("PRESS SHIFT");
-//  while (digitalRead (startButton) == HIGH) {
-//    // DEBUG(".");
-//    delay(100);
-//  }
+  //  // Wait for start button to be pressed
+  //  DEBUGLN("PRESS SHIFT");
+  //  while (digitalRead (startButton) == HIGH) {
+  //    // DEBUG(".");
+  //    delay(100);
+  //  }
 
+  // RESET THE TARGET WITH A wire connecteed to rstPin (currently 32) on the programmer.
+  // Just to test things
+  digitalWrite (rstPin, LOW);
+  delay (2);
+  digitalWrite (rstPin, HIGH);
+  DEBUGLN ("Target Reset"); 
 
   // Get in sync first
   bool inSync = false;
@@ -107,9 +121,11 @@ void loop() {
     // We should flush the serial buffer to clear out any garbage
     // FIXME Maybe Serial.clear() on the Teensy would be better than this
     // FIXME while loop?
+    DEBUGLN ("Next we will purge the Programmer's UART buffer");
     while (Serial2.available())
     {
       //Serial.println(Serial2.read());   // read it and send it out Serial (USB)
+
       (void)Serial2.read(); // Read in any data and throw it away
     }
 
@@ -209,6 +225,10 @@ void loop() {
   else
   {
     DEBUGLN("FIXME Tell the user it's timed out, did they hit the reset in time?");
+    DEBUGLN("");
+    DEBUGLN("");
+    DEBUGLN("");
+    DEBUGLN("");    
   }
 
   // FIXME This is the end of the program...
@@ -248,23 +268,25 @@ int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
 {
   DEBUGLN("We are in getResponse function");
   uint32_t reponsestart = millis();
-  while ((millis() - reponsestart < timeout)  && (Serial.available() < bufferLen))
+  while ((millis() - reponsestart < timeout)  && (Serial2.available() < bufferLen))
   {
-    delay(100);
+    delay(1);
 
   }
   DEBUGLN("End of checking in getResponse function");
-  
+
   if ((millis() - reponsestart) < timeout) //testing this funciton ...debug not showing which is strnage
   {
     // We've got some data
-    //return Serial2.readBytes(buffer, bufferLen);
+
     DEBUGLN("getResponse function retuned a value");
+    return Serial2.readBytes(buffer, bufferLen);
   }
   else
   {
+   
+    DEBUGLN("getResponse function retuned a -1"); 
     return -1;
-    DEBUGLN("getResponse function retuned a -1");
   }
 }
 
@@ -282,6 +304,7 @@ void sendCommand(uint8_t* cmd, size_t cmdLen)
 // Sends a command with data and tacks on the CRC_EOP
 void sendCommandPlusData(uint8_t* cmd, size_t cmdLen, uint8_t* data, size_t dataLen)
 {
+  DEBUGLN("Sending some data to target, plus CRC_EOP");
   Serial2.write(cmd, cmdLen);
   Serial2.write(data, dataLen);
   Serial2.write(CRC_EOP);
