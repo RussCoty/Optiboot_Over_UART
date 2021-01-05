@@ -3,8 +3,8 @@
     to the Serial UART on the 328 directly.
 */
 
-#define syncTimeout       500
-#define responseTimeout   500
+#define syncTimeout       1000
+#define responseTimeout   1000
 
 /* STK500 constants list, from AVRDUDE */
 #define STK_OK              0x10
@@ -89,12 +89,12 @@ uint8_t pageBuffer[image_page_size];
 void loop() {
 
 
-  // Wait for start button to be pressed
-  DEBUGLN("PRESS SHIFT");
-  while (digitalRead (startButton) == HIGH) {
-    // DEBUG(".");
-    delay(100);
-  }
+//  // Wait for start button to be pressed
+//  DEBUGLN("PRESS SHIFT");
+//  while (digitalRead (startButton) == HIGH) {
+//    // DEBUG(".");
+//    delay(100);
+//  }
 
 
   // Get in sync first
@@ -255,10 +255,10 @@ int getResponse(uint8_t* buffer, int bufferLen, uint32_t timeout)
   }
   DEBUGLN("End of checking in getResponse function");
   
-  if (1)//((millis() - reponsestart) < timeout) //testing this funciton ...debug not showing which is strnage
+  if ((millis() - reponsestart) < timeout) //testing this funciton ...debug not showing which is strnage
   {
     // We've got some data
-    return Serial2.readBytes(buffer, bufferLen);
+    //return Serial2.readBytes(buffer, bufferLen);
     DEBUGLN("getResponse function retuned a value");
   }
   else
